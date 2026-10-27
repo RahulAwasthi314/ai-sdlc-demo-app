@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Git Post-Commit Hook: Run dotnet Stryker mutation testing
+echo ""
+echo "======================================================"
+echo " [Git Hook: post-commit] Triggering dotnet Stryker"
+echo "======================================================"
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+SCRIPT_PATH="$REPO_ROOT/.agents/skills/stryker-mutation/scripts/run-stryker-gate.ps1"
+
+if [ -f "$SCRIPT_PATH" ]; then
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$SCRIPT_PATH" -Since "HEAD~1"
+else
+    echo "Stryker gate script not found at $SCRIPT_PATH"
+fi

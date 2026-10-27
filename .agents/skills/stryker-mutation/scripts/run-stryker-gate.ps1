@@ -4,6 +4,9 @@ param (
     [string]$TargetBranch,
 
     [Parameter(Mandatory = $false)]
+    [string]$Since,
+
+    [Parameter(Mandatory = $false)]
     [int]$Threshold = 80,
 
     [Parameter(Mandatory = $false)]
@@ -82,8 +85,9 @@ Write-Host "`n[3/4] Running dotnet Stryker mutation analysis..." -ForegroundColo
 $strykerArgs = @("stryker", "--project", "InvoiceApp.Domain.csproj", "-r", "ClearText", "-r", "Json", "-r", "Html", "-b", "$Threshold")
 
 if (-not $Full) {
-    Write-Host "Mode: Differential mutation testing (target: $TargetBranch)" -ForegroundColor Cyan
-    $strykerArgs += "--since:$TargetBranch"
+    $sinceRef = if ($Since) { $Since } else { $TargetBranch }
+    Write-Host "Mode: Differential mutation testing (target: $sinceRef)" -ForegroundColor Cyan
+    $strykerArgs += "--since:$sinceRef"
 } else {
     Write-Host "Mode: Full mutation testing (entire domain model)" -ForegroundColor Cyan
 }
