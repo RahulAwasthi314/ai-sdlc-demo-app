@@ -1,16 +1,12 @@
-﻿<!--
+<!--
 SYNC IMPACT REPORT (remove before committing)
 =============================================
-Version change: [unversioned template] -> 1.0.0
-Added sections:
-  - Core Principles (I-VIII, all new)
-  - Technology Stack Standards (new)
-  - Development Workflow & Quality Gates (new)
-  - Governance (new)
-Modified principles: N/A (first authored version)
-Removed sections: N/A
-Deferred TODOs:
-  - RATIFICATION_DATE: set to today 2026-10-26; project inception date not known separately.
+Version change: 1.0.0 -> 1.0.1
+Modified principles:
+  - VIII. Documentation & Code Comments: Clarified and enforced that each feature execution flow deliverables folder contains separate backend and frontend Postman collections with at least one test data set, along with C4 container diagram, sequence diagram, UML diagram, PRD.md, and BRD.md.
+Added sections: None
+Removed sections: None
+Deferred TODOs: None
 -->
 
 # Invoice Approval App Constitution
@@ -42,7 +38,7 @@ Deferred TODOs:
 
 ### III. Modular & Reusable Component Architecture
 
-- Frontend components MUST be self-contained, independently testable, and reusable across
+- Frontend components MUST be self-contained, modular, independently testable, and reusable across
   feature modules.
 - Each Angular component, service, pipe, or guard MUST reside in its own dedicated file.
 - Backend services and controllers MUST follow single-responsibility: one controller per resource,
@@ -55,107 +51,119 @@ Deferred TODOs:
 
 - TypeScript MUST have `strict: true` enabled; all data shapes MUST be declared as `interface`
   or `type` -- never inlined `{}` or `object`.
-- C# code MUST use records for request bodies and DTOs (code-first approach for data formats).
+- C# code MUST use records for request bodies and DTOs using a **code-first approach** for data
+  formats.
 - All code MUST comply with **clean code guidelines**: meaningful names, no one-letter variables,
   no `flag` parameters, no magic numbers, functions <= 20 lines where possible.
-- **SonarQube** (or equivalent static analysis) issues MUST be resolved before merge; zero
-  blocker/critical issues are a merge gate.
+- **SonarQube** (or equivalent static analysis) issues MUST NOT be present; zero blocker/critical/major
+  issues are a mandatory merge gate.
 - **Rationale**: Strict typing eliminates a class of runtime errors; clean code lowers the cost
   of maintenance.
 
 ### V. Security & Route Protection
 
-- The **homepage** is the only public route; all other frontend routes MUST be protected by
-  Angular route guards.
-- All backend endpoints EXCEPT the homepage MUST be behind authentication. Destructive actions
-  MUST use `[RequireRole("Admin")]`; approval actions MUST use
+- The **homepage** is the only route without route guards; all other frontend routes MUST be
+  guarded with route guards.
+- All backend endpoints EXCEPT the homepage route MUST be behind authentication route/endpoint
+  guards. Destructive actions MUST use `[RequireRole("Admin")]`; approval actions MUST use
   `[RequireRole("Approver")]` or `[RequireRole("Admin")]`.
 - Real credentials, tokens, and customer data MUST NEVER be committed to version control.
 - **Rationale**: Defense-in-depth at both layers prevents unauthorized access to sensitive
-  invoice data.
+  invoice data while allowing public landing access.
 
 ### VI. Global Exception Handling
 
-- The **frontend** MUST implement a global Angular `ErrorHandler` that catches unhandled
-  exceptions and presents user-friendly error messages.
-- The **backend** MUST implement a global exception-handling middleware (or filter) that maps
-  domain errors to appropriate HTTP status codes (400, 404, 409) and never leaks stack traces
-  to clients.
+- The **frontend** MUST implement a global Angular `ErrorHandler` (and HTTP error interceptor)
+  that catches unhandled exceptions and presents user-friendly error messages.
+- The **backend** MUST implement global exception-handling middleware that maps domain errors to
+  appropriate HTTP status codes (400, 404, 409) and never leaks stack traces to clients.
 - **Rationale**: Centralised error handling prevents information leakage and provides a
-  consistent user experience.
+  consistent user experience across the application.
 
 ### VII. Testing Standards (NON-NEGOTIABLE)
 
-- Unit tests MUST be written **after** feature implementation (implementation-first, not TDD).
-- **Frontend**: Use **Vitest** (not Jasmine/Karma). ESLint MUST use the latest recommended
-  ruleset. Coverage gate is **80%** (lines, branches, functions, statements).
-- **Backend**: Use **xUnit**. Coverage gate is **80%**.
-- **E2E / Mutation tests**: Use **Stryker** for trivial function mutation testing.
-  End-to-end tests MUST use page objects with role-based locators (`getByRole`, `getByLabel`);
-  CSS/XPath selectors are forbidden.
-- **Rationale**: Consistent tooling across the team and enforced gates prevent regressions and
-  raise confidence in deployments.
+- Unit tests MUST be written **after** feature implementation (implementation-first approach).
+- **Frontend Unit Testing**: Use **Vitest** (Jasmine/Karma is forbidden). Frontend code MUST follow
+  the latest recommended **ESLint** ruleset.
+- **Backend Unit Testing**: Use **xUnit**.
+- **Coverage Gate**: Overall test coverage MUST be at least **80%** (lines, branches, functions,
+  statements) across both frontend and backend.
+- **E2E / Mutation Testing**: Mutation testing for trivial functions MUST be done using **Stryker**.
+  End-to-end tests MUST use page objects and role-based locators (`getByRole`, `getByLabel`);
+  CSS and XPath selectors are strictly forbidden.
+- **Rationale**: Strict test quality gates and post-implementation test verification ensure robust
+  regression prevention without slowing down initial feature prototyping.
 
 ### VIII. Documentation & Code Comments
 
-- Every function, method, and class MUST have a concise doc comment of **1-2 lines** describing
-  its purpose (not its implementation).
-- Deliverables for each feature MUST include:
-  - C4 Container diagram
-  - Sequence diagram
-  - UML class diagram
-  - PRD document (.md)
-  - BRD document (.md)
-  - Postman collection with at least one test data set (backend and frontend separately)
-  - All placed in `docs/features/<feature-name>/deliverables/`
-- **Rationale**: Documentation as a first-class deliverable ensures knowledge transfer and
-  facilitates audits.
+- Functions and blocks MUST be properly formatted with a crisp document comment of **1 to 2 lines**
+  maximum describing the functionality of that block.
+- For each feature execution flow, a dedicated deliverables directory MUST be maintained under
+  `docs/features/<feature-name>/deliverables/` containing:
+  - **C4 Container Diagram**
+  - **Sequence Diagram**
+  - **UML Diagram** (Class/Component structure)
+  - **PRD Document** (`PRD.md`)
+  - **BRD Document** (`BRD.md`)
+  - **Backend Postman Collection** (with at least one test data set)
+  - **Frontend Postman Collection** (with at least one test data set)
+- **Rationale**: Crisp inline documentation and standardized design artifacts guarantee full
+  traceability from business requirements to API verification.
 
 ## Technology Stack Standards
 
 ### Frontend
 
-| Concern          | Choice                          |
-|------------------|---------------------------------|
-| Framework        | Angular 21                      |
-| Language         | TypeScript (strict mode)        |
-| UI Library       | Angular Material                |
-| Reactive prim.   | Signals, Reactive Forms         |
-| Linting          | ESLint (latest recommended)     |
-| Unit testing     | Vitest                          |
-| E2E / Mutation   | Stryker (Playwright page objs)  |
-| Accessibility    | WCAG 2.1 AA, ARIA               |
+| Concern          | Choice                                      |
+|------------------|---------------------------------------------|
+| Framework        | Angular 21                                  |
+| Language         | TypeScript (strict mode, explicit types)    |
+| UI Library       | Angular Material                            |
+| Modern Tools     | WCAG 2.1 AA Accessibility, ARIA attributes  |
+| Reactive Prim.   | Signals, Reactive Forms                     |
+| Linting          | Latest ESLint recommended ruleset           |
+| Unit Testing     | Vitest                                      |
+| E2E / Mutation   | Stryker (Playwright with page objects)      |
+| Route Guarding   | Angular Route Guards (all routes except /)  |
+| Error Handling   | Global ErrorHandler & HTTP Interceptor      |
 
 ### Backend
 
-| Concern          | Choice                          |
-|------------------|---------------------------------|
-| Framework        | ASP.NET Core (.NET 10)          |
-| API style        | REST                            |
-| Database         | In-memory (repository pattern)  |
-| Unit testing     | xUnit                           |
-| Data format      | Code-first (C# records / DTOs)  |
-| Static analysis  | SonarQube / dotnet-analyzer     |
+| Concern          | Choice                                      |
+|------------------|---------------------------------------------|
+| Framework        | ASP.NET Core (.NET 10)                      |
+| API Style        | REST principles                             |
+| Database         | In-memory repository pattern                |
+| Unit Testing     | xUnit                                       |
+| Data Format      | Code-first approach (C# records & DTOs)     |
+| Static Analysis  | Clean Code guidelines & SonarQube (0 issues)|
+| Route Guarding   | Role-based authentication filters / guards  |
+| Error Handling   | Global Exception Middleware (400, 404, 409) |
 
 ### Branching & Versioning
 
-- Feature branches MUST follow: `feature-[number]/feature-name`
-  (e.g., `feature-42/invoice-approval`).
-- Semantic versioning applies to the constitution and all shared packages.
+- Feature branches MUST follow the naming convention: `feature-[number]/feature-name`
+  (e.g., `feature-01/invoice-approval`).
+- Semantic versioning applies to the constitution and all shared contracts.
 
 ## Development Workflow & Quality Gates
 
-- **Implementation order**: Feature code -> Unit tests -> Code review -> Merge.
-- **Coverage gate**: 80% across lines, branches, functions, and statements for both frontend and
-  backend; CI MUST fail below this threshold.
-- **Linting gate**: Zero ESLint errors on frontend; zero SonarQube blocker/critical issues on
-  backend before merge.
-- **Postman collection**: Each feature MUST ship a collection with at least one positive and one
-  negative test case per endpoint, committed under `docs/postman/`.
-- **Deliverables folder**: Each feature MUST include
-  `docs/features/<feature-name>/deliverables/` containing C4, sequence, UML, PRD, and BRD.
-- **Code review**: At least one peer review required before merge to `main`.
-- **Environments**: Only `localhost` in-memory for now; no cloud deployment gates required.
+- **Execution Flow**:
+  1. Feature implementation.
+  2. Unit testing (Vitest for Angular, xUnit for .NET).
+  3. Quality & Coverage verification (80% minimum coverage gate).
+  4. Static analysis (Latest ESLint on frontend, Sonar issues resolved on backend).
+  5. Feature deliverables generation in `docs/features/<feature-name>/deliverables/`.
+  6. Code review & merge.
+- **Coverage Gate**: 80% coverage threshold enforced across both frontend and backend projects.
+- **Deliverables Package**: Every feature MUST generate and deliver in its feature folder:
+  - C4 container diagram
+  - Sequence diagram
+  - UML diagram
+  - `PRD.md` (Product Requirements Document)
+  - `BRD.md` (Business Requirements Document)
+  - Separate Postman collections for backend and frontend, each containing at least one test data set.
+- **Documentation Standard**: Maximum 1-2 line crisp header comments on functions and blocks.
 
 ## Governance
 
@@ -165,9 +173,9 @@ Deferred TODOs:
 - Version bumps follow semantic versioning:
   - **MAJOR** -- backward-incompatible governance changes or principle removals.
   - **MINOR** -- new principles or materially expanded guidance.
-  - **PATCH** -- clarifications, wording improvements, typo fixes.
+  - **PATCH** -- clarifications, wording improvements, alignment refinements.
 - All pull requests MUST verify compliance with this constitution in the PR description checklist.
 - The constitution is reviewed at the start of each feature cycle.
 - Refer to `.agents/` for runtime skill and workflow guidance used by AI agents on this project.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-26 | **Last Amended**: 2026-10-26
+**Version**: 1.0.1 | **Ratified**: 2026-10-26 | **Last Amended**: 2026-10-28
