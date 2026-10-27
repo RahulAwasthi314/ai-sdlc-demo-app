@@ -21,6 +21,10 @@ public abstract class ApiControllerBase : ControllerBase
         {
             return Conflict(new ApiErrorDto(ex.Message, "CONFLICT", 409));
         }
+        catch (ApprovalLimitExceededException ex)
+        {
+            return BadRequest(new ApiErrorDto(ex.Message, "LIMIT_EXCEEDED", 400));
+        }
         catch (ArgumentException ex)
         {
             return BadRequest(new ApiErrorDto(ex.Message, "BAD_REQUEST", 400));

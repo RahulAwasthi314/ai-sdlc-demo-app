@@ -2,10 +2,12 @@ namespace InvoiceApp.Domain;
 
 /// <summary>
 /// Moves an invoice through its lifecycle: Draft -> PendingApproval -> Approved or Rejected.
-/// One invoice at a time, decided as a whole by a single approver.
+/// Enforces role-based limits (e.g. Manager limit of 50,000) and segregation of duties.
 /// </summary>
 public class ApprovalService
 {
+    public const decimal ManagerApprovalLimit = 50000m;
+
     private readonly IInvoiceRepository _repository;
 
     public ApprovalService(IInvoiceRepository repository)
@@ -28,10 +30,11 @@ public class ApprovalService
         return invoice;
     }
 
-    public Invoice Approve(string invoiceId, string approver)
+    public Invoice Approve(string invoiceId, string approver, string? role = null)
     {
         var invoice = Find(invoiceId);
         EnsurePending(invoice);
+        ValidateDecisionAuthority(invoice, role, "approval");
 
         invoice.Status = InvoiceStatus.Approved;
         invoice.DecidedBy = approver;
@@ -40,7 +43,7 @@ public class ApprovalService
         return invoice;
     }
 
-    public Invoice Reject(string invoiceId, string approver, string reason)
+    public Invoice Reject(string invoiceId, string approver, string reason, string? role = null)
     {
         if (string.IsNullOrWhiteSpace(reason))
         {
@@ -49,6 +52,7 @@ public class ApprovalService
 
         var invoice = Find(invoiceId);
         EnsurePending(invoice);
+        ValidateDecisionAuthority(invoice, role, "rejection");
 
         invoice.Status = InvoiceStatus.Rejected;
         invoice.DecidedBy = approver;
@@ -68,6 +72,20 @@ public class ApprovalService
         {
             throw new InvalidOperationException(
                 $"Invoice {invoice.Id} is {invoice.Status}; only pending invoices can be decided.");
+        }
+    }
+
+    private static void ValidateDecisionAuthority(Invoice invoice, string? role, string action)
+    {
+        if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Administrators are not authorized to decide invoices (segregation of duties).");
+        }
+
+        if (string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase) && invoice.Amount > ManagerApprovalLimit)
+        {
+            throw new ApprovalLimitExceededException(
+                $"Manager {action} limit exceeded: invoice amount {invoice.Amount:F2} exceeds authorized threshold of {ManagerApprovalLimit:F2}.");
         }
     }
 }

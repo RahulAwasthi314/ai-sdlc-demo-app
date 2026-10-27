@@ -27,4 +27,5 @@ th, td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line);
 #pending-list li { display:grid; grid-template-columns:1fr auto; gap:8px 16px; align-items:center; padding:12px; border:1px solid var(--line); border-radius:8px; }
 .reject-row { grid-column:1 / -1; display:flex; gap:8px; }
 .reject-row input { flex:1; }
-[role="alert"] { color:var(--warn); margin:4px 0 0; }
+[role="alert"] { color:var(--warn); margin:8px 0; font-weight:600; }
+.hint { color:var(--muted); font-size:14px; margin:0 0 12px; }

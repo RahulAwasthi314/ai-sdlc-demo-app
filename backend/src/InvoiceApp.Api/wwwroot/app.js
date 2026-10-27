@@ -33,6 +33,13 @@
     show('session-bar', signedIn);
     if (signedIn) {
       $('whoami').textContent = `${session.username} (${session.role})`;
+      if (session.role === 'Manager') {
+        $('role-limit-notice').textContent = 'Manager approval limit: up to $50,000.00 per invoice.';
+        show('role-limit-notice', true);
+      } else {
+        $('role-limit-notice').textContent = '';
+        show('role-limit-notice', false);
+      }
       refresh();
     }
   }
