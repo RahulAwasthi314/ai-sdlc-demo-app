@@ -1,4 +1,5 @@
 using InvoiceApp.Api.Auth;
+using InvoiceApp.Api.Models;
 using InvoiceApp.Domain;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,7 +29,7 @@ public class InvoicesController : ApiControllerBase
         {
             if (!Enum.TryParse<InvoiceStatus>(status, ignoreCase: true, out var parsed))
             {
-                return BadRequest(new { error = $"Unknown status '{status}'." });
+                return BadRequest(new ApiErrorDto($"Unknown status '{status}'.", "INVALID_STATUS", 400));
             }
 
             invoices = invoices.Where(i => i.Status == parsed).ToList();
@@ -41,7 +42,9 @@ public class InvoicesController : ApiControllerBase
     public ActionResult<Invoice> GetById(string id)
     {
         var invoice = _repository.GetById(id);
-        return invoice is null ? NotFound() : Ok(invoice);
+        return invoice is null
+            ? NotFound(new ApiErrorDto($"Invoice with id '{id}' was not found.", "NOT_FOUND", 404))
+            : Ok(invoice);
     }
 
     [HttpPost]
@@ -49,12 +52,12 @@ public class InvoicesController : ApiControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.CustomerName))
         {
-            return BadRequest(new { error = "Customer name is required." });
+            return BadRequest(new ApiErrorDto("Customer name is required.", "VALIDATION_ERROR", 400));
         }
 
         if (request.Amount <= 0)
         {
-            return BadRequest(new { error = "Amount must be greater than zero." });
+            return BadRequest(new ApiErrorDto("Amount must be greater than zero.", "VALIDATION_ERROR", 400));
         }
 
         var invoice = _repository.Add(new Invoice
@@ -72,5 +75,7 @@ public class InvoicesController : ApiControllerBase
     [HttpDelete("{id}")]
     [RequireRole("Admin")]
     public IActionResult Delete(string id) =>
-        _repository.Remove(id) ? NoContent() : NotFound();
+        _repository.Remove(id)
+            ? NoContent()
+            : NotFound(new ApiErrorDto($"Invoice with id '{id}' was not found.", "NOT_FOUND", 404));
 }

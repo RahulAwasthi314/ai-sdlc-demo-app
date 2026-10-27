@@ -7,5 +7,33 @@
         "timeout": 20
       }
     ]
+  },
+  "api-rest-guardrails": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python hooks/api_guardrails_hook.py --event PreInvocation",
+        "timeout": 15
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python hooks/api_guardrails_hook.py --event PostToolUse",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python hooks/api_guardrails_hook.py --event Stop",
+        "timeout": 25
+      }
+    ]
   }
 }

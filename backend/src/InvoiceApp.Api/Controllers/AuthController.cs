@@ -1,4 +1,5 @@
 using InvoiceApp.Api.Auth;
+using InvoiceApp.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -28,7 +29,7 @@ public class AuthController : ControllerBase
 
         if (user is null)
         {
-            return Unauthorized(new { error = "Invalid username or password." });
+            return Unauthorized(new ApiErrorDto("Invalid username or password.", "UNAUTHORIZED", 401));
         }
 
         var token = _sessions.Create(new UserSession(user.Username, user.Role));

@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using InvoiceApp.Api;
 using InvoiceApp.Api.Auth;
+using InvoiceApp.Api.Middleware;
 using InvoiceApp.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,7 @@ builder.Services.AddScoped<ApprovalService>();
 
 var app = builder.Build();
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseMiddleware<SessionAuthMiddleware>();
