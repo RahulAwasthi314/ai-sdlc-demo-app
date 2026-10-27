@@ -1,0 +1,10 @@
+{
+	"hooks": {
+		"UserPromptSubmit": [
+			{
+				"type": "command",
+				"command": "node .github/hooks/log-ai-interactions.cjs prompt"
+			}
+		]
+	}
+}
