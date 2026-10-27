@@ -1,0 +1,11 @@
+{
+  "interaction-logger": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python hooks/log_interactions.py",
+        "timeout": 20
+      }
+    ]
+  }
+}
