@@ -1,19 +1,22 @@
-# Spec-Kit Extension Hooks configuration
-version: "1.0"
-
+version: '1.0'
 hooks:
   before_specify:
-    - extension: git-feature-branch
-      command: speckit-git-branch
-      description: "Create and switch to feature branch for new feature"
-      prompt: "powershell -ExecutionPolicy Bypass -File .specify/scripts/powershell/create-feature-branch.ps1 -Json"
-      optional: false
-      enabled: true
-
+  - extension: git-feature-branch
+    command: speckit-git-branch
+    description: Create and switch to feature branch for new feature
+    prompt: powershell -ExecutionPolicy Bypass -File .specify/scripts/powershell/create-feature-branch.ps1
+      -Json
+    optional: false
+    enabled: true
   before_implement:
-    - extension: git-feature-branch
-      command: speckit-git-branch
-      description: "Ensure implementation occurs on the feature branch rather than master/main"
-      prompt: "powershell -ExecutionPolicy Bypass -File .specify/scripts/powershell/create-feature-branch.ps1 -Json"
-      optional: false
-      enabled: true
+  - extension: git-feature-branch
+    command: speckit-git-branch
+    description: Ensure implementation occurs on the feature branch rather than master/main
+    prompt: powershell -ExecutionPolicy Bypass -File .specify/scripts/powershell/create-feature-branch.ps1
+      -Json
+    optional: false
+    enabled: true
+installed:
+- github
+settings:
+  auto_execute_hooks: true
