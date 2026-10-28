@@ -15,6 +15,7 @@ export interface Invoice {
   decidedBy?: string | null;
   decidedAt?: string | null;
   decisionNote?: string | null;
+  approvers?: string[];
 }
 
 /**

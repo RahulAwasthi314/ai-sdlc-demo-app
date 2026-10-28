@@ -13,7 +13,7 @@ import { Invoice } from '../../core/models/invoice.model';
 import { ApiErrorDto } from '../../core/models/api-error.dto';
 
 /**
- * Component for managers to review pending invoices, execute approvals within threshold,
+ * Component for managers and directors to review pending invoices, execute approvals within threshold,
  * or reject invoices with a mandatory reason note.
  */
 @Component({
@@ -39,6 +39,8 @@ import { ApiErrorDto } from '../../core/models/api-error.dto';
             <span class="threshold-badge">
               @if (userRole() === 'Manager') {
                 Authorized Limit: $50,000.00
+              } @else if (userRole() === 'Director') {
+                Authorized Limit: $500,000.00
               } @else {
                 Authorized Limit: Executive / Unlimited
               }
@@ -47,6 +49,8 @@ import { ApiErrorDto } from '../../core/models/api-error.dto';
           <div class="limit-caption">
             @if (userRole() === 'Manager') {
               Invoices exceeding $50,000.00 cannot be approved or rejected by Managers and require executive sign-off.
+            } @else if (userRole() === 'Director') {
+              Invoices exceeding $500,000.00 cannot be approved or rejected by Directors and require executive sign-off.
             } @else {
               Authorized to decide pending business invoices.
             }
@@ -100,10 +104,10 @@ import { ApiErrorDto } from '../../core/models/api-error.dto';
                       <span class="customer-name">{{ invoice.customerName }}</span>
                     </div>
 
-                    <div class="item-amount" [class.over-limit]="userRole() === 'Manager' && invoice.amount > 50000">
+                    <div class="item-amount" [class.over-limit]="isOverLimit(invoice.amount)">
                       {{ invoice.amount | currency }}
-                      @if (userRole() === 'Manager' && invoice.amount > 50000) {
-                        <span class="limit-warning-tag">Exceeds $50k Limit</span>
+                      @if (isOverLimit(invoice.amount)) {
+                        <span class="limit-warning-tag">{{ getLimitWarning(invoice.amount) }}</span>
                       }
                     </div>
                   </div>
@@ -321,6 +325,20 @@ export class PendingApprovalsComponent implements OnInit {
         this.decisionError.set(err.error || 'Failed to load invoices.');
       },
     });
+  }
+
+  isOverLimit(amount: number): boolean {
+    const role = this.userRole();
+    if (role === 'Manager' && amount > 50000) return true;
+    if (role === 'Director' && amount > 500000) return true;
+    return false;
+  }
+
+  getLimitWarning(amount: number): string {
+    const role = this.userRole();
+    if (role === 'Manager' && amount > 50000) return 'Exceeds $50k Limit';
+    if (role === 'Director' && amount > 500000) return 'Exceeds $500k Limit';
+    return '';
   }
 
   onApprove(invoiceId: string): void {

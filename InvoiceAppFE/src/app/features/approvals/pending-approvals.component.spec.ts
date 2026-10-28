@@ -137,4 +137,65 @@ describe('PendingApprovalsComponent', () => {
 
     expect(component.decisionError()).toContain('reason is required');
   });
+
+  it('should identify over-limit for Director when amount > 500,000', () => {
+    const authService = TestBed.inject(AuthService);
+    (authService as any).sessionState.set({
+      token: 'test-token',
+      username: 'demo.director',
+      role: 'Director',
+    });
+
+    expect(component.isOverLimit(250000)).toBe(false);
+    expect(component.isOverLimit(500000)).toBe(false);
+    expect(component.isOverLimit(500000.01)).toBe(true);
+    expect(component.getLimitWarning(500000.01)).toBe('Exceeds $500k Limit');
+  });
+
+  it('should display error alert when Director approval exceeds 500,000', () => {
+    const authService = TestBed.inject(AuthService);
+    (authService as any).sessionState.set({
+      token: 'test-token',
+      username: 'demo.director',
+      role: 'Director',
+    });
+
+    fixture.detectChanges();
+    httpMock.expectOne('/api/invoices').flush(mockInvoices);
+
+    component.onApprove('INV-202');
+
+    const approveReq = httpMock.expectOne('/api/approvals/INV-202/approve');
+    const limitError: ApiErrorDto = {
+      error: 'Director approval limit exceeded: invoice amount 550000.00 exceeds authorized threshold of 500000.00.',
+      code: 'LIMIT_EXCEEDED',
+      status: 400,
+    };
+    approveReq.flush(limitError, { status: 400, statusText: 'Bad Request' });
+
+    expect(component.decisionError()).toContain('Director approval limit exceeded');
+    expect(component.decisionError()).toContain('500000.00');
+  });
+
+  it('should render error alert and preserve pending invoice when approval returns SAME_APPROVER_NOT_ALLOWED', () => {
+    fixture.detectChanges();
+    httpMock.expectOne('/api/invoices').flush(mockInvoices);
+
+    expect(component.pendingInvoices().length).toBe(2);
+
+    component.onApprove('INV-201');
+
+    const approveReq = httpMock.expectOne('/api/approvals/INV-201/approve');
+    const sameApproverError: ApiErrorDto = {
+      error: 'The same user may never count as both approvers on one invoice.',
+      code: 'SAME_APPROVER_NOT_ALLOWED',
+      status: 400,
+    };
+    approveReq.flush(sameApproverError, { status: 400, statusText: 'Bad Request' });
+
+    expect(component.decisionError()).toBe('The same user may never count as both approvers on one invoice.');
+    // Ensure invoice list item is preserved
+    expect(component.pendingInvoices().length).toBe(2);
+    expect(component.pendingInvoices().some((i) => i.id === 'INV-201')).toBe(true);
+  });
 });

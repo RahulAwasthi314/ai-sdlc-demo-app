@@ -118,4 +118,47 @@ public class ApiErrorHandlingTests
         Assert.Equal("NOT_FOUND", errorDto.Code);
         Assert.Equal(404, errorDto.Status);
     }
+
+    [Fact]
+    public void Handle_WhenSameApproverAttempted_Returns400WithSameApproverCode()
+    {
+        var controller = new TestController();
+
+        var result = controller.TestHandle(() =>
+            throw new InvalidOperationException("The same user may never count as both approvers on one invoice."));
+
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal((int)HttpStatusCode.BadRequest, badRequestResult.StatusCode);
+
+        var errorDto = Assert.IsType<ApiErrorDto>(badRequestResult.Value);
+        Assert.Equal("The same user may never count as both approvers on one invoice.", errorDto.Error);
+        Assert.Equal("SAME_APPROVER_NOT_ALLOWED", errorDto.Code);
+        Assert.Equal(400, errorDto.Status);
+    }
+
+    [Fact]
+    public async Task Middleware_WhenSameApproverAttempted_Returns400WithSameApproverCode()
+    {
+        var middleware = new GlobalExceptionMiddleware(
+            _ => throw new InvalidOperationException("The same user may never count as both approvers on one invoice."),
+            NullLogger<GlobalExceptionMiddleware>.Instance
+        );
+
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(context.Response.Body);
+        var body = await reader.ReadToEndAsync();
+
+        var errorDto = JsonSerializer.Deserialize<ApiErrorDto>(body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        Assert.NotNull(errorDto);
+        Assert.Equal("The same user may never count as both approvers on one invoice.", errorDto.Error);
+        Assert.Equal("SAME_APPROVER_NOT_ALLOWED", errorDto.Code);
+        Assert.Equal(400, errorDto.Status);
+    }
 }

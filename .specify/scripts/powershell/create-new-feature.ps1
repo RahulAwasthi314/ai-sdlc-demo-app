@@ -328,6 +328,25 @@ if (-not $DryRun) {
     $env:SPECIFY_FEATURE = $branchName
     $env:SPECIFY_FEATURE_DIRECTORY = $featureDir
 
+    # Automatically switch or create the git branch for the feature if in a git repository
+    if (Test-Path (Join-Path $repoRoot ".git")) {
+        $curBranch = (git branch --show-current 2>$null).Trim()
+        if ($curBranch -ne $branchName) {
+            $existing = git branch --list $branchName
+            $prevEap = $ErrorActionPreference
+            $ErrorActionPreference = 'Continue'
+            try {
+                if ($existing) {
+                    & git checkout -q $branchName 2>$null
+                } else {
+                    & git checkout -q -b $branchName 2>$null
+                }
+            } finally {
+                $ErrorActionPreference = $prevEap
+            }
+        }
+    }
+
     $quotedBranchName = "'" + $branchName.Replace("'", "''") + "'"
     $quotedFeatureDir = "'" + $featureDir.Replace("'", "''") + "'"
     $featureAssignment = '$env:SPECIFY_FEATURE = ' + $quotedBranchName

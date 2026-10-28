@@ -44,7 +44,7 @@ export class AuthService {
         this.sessionState.set(session);
         sessionStorage.setItem('session', JSON.stringify(session));
 
-        if (session.role === 'Manager' || session.role === 'Approver') {
+        if (session.role === 'Manager' || session.role === 'Approver' || session.role === 'Director') {
           this.router.navigate(['/approvals']);
         } else {
           this.router.navigate(['/invoices']);

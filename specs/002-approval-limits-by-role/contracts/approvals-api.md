@@ -5,20 +5,20 @@
 - **Route**: `POST /api/approvals/{invoiceId}/approve`
 - **Headers**:
   - `Authorization: Bearer <token>`
-- **Response 200 OK**:
+- **Response 200 OK (Manager or Director within threshold)**:
   ```json
   {
     "id": "INV-101",
     "customerName": "Acme Corp",
-    "amount": 42000.00,
+    "amount": 250000.00,
     "status": "Approved",
     "createdAt": "2026-10-28T02:00:00Z",
-    "decidedBy": "demo.manager",
+    "decidedBy": "demo.director",
     "decidedAt": "2026-10-28T02:30:00Z",
     "decisionNote": null
   }
   ```
-- **Response 400 Bad Request (Limit Exceeded)**:
+- **Response 400 Bad Request (Manager Limit Exceeded > 50,000)**:
   ```json
   {
     "error": "Manager approval limit exceeded: invoice amount 65000.00 exceeds authorized threshold of 50000.00.",
@@ -27,10 +27,19 @@
     "details": null
   }
   ```
+- **Response 400 Bad Request (Director Limit Exceeded > 500,000)**:
+  ```json
+  {
+    "error": "Director approval limit exceeded: invoice amount 550000.00 exceeds authorized threshold of 500000.00.",
+    "code": "LIMIT_EXCEEDED",
+    "status": 400,
+    "details": null
+  }
+  ```
 - **Response 400 Bad Request (Admin Prohibited)**:
   ```json
   {
-    "error": "Administrators are not authorized to approve invoices (segregation of duties).",
+    "error": "Administrators are not authorized to decide invoices (segregation of duties).",
     "code": "ROLE_NOT_PERMITTED",
     "status": 400,
     "details": null
@@ -50,23 +59,23 @@
     "reason": "Duplicate invoice charges"
   }
   ```
-- **Response 200 OK**:
+- **Response 200 OK (Manager or Director within threshold)**:
   ```json
   {
     "id": "INV-102",
     "customerName": "Beta LLC",
-    "amount": 35000.00,
+    "amount": 120000.00,
     "status": "Rejected",
     "createdAt": "2026-10-28T02:10:00Z",
-    "decidedBy": "demo.manager",
+    "decidedBy": "demo.director",
     "decidedAt": "2026-10-28T02:35:00Z",
     "decisionNote": "Duplicate invoice charges"
   }
   ```
-- **Response 400 Bad Request (Limit Exceeded)**:
+- **Response 400 Bad Request (Director Limit Exceeded > 500,000)**:
   ```json
   {
-    "error": "Manager rejection limit exceeded: invoice amount 75000.00 exceeds authorized handling threshold of 50000.00.",
+    "error": "Director rejection limit exceeded: invoice amount 600000.00 exceeds authorized threshold of 500000.00.",
     "code": "LIMIT_EXCEEDED",
     "status": 400,
     "details": null

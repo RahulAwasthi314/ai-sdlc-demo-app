@@ -4,6 +4,9 @@ param (
     [string]$TargetBranch,
 
     [Parameter(Mandatory = $false)]
+    [string]$Since,
+
+    [Parameter(Mandatory = $false)]
     [int]$Threshold = 80,
 
     [Parameter(Mandatory = $false)]
@@ -65,7 +68,7 @@ try {
 Write-Host "`n[2/4] Verifying baseline unit tests before mutation..." -ForegroundColor Yellow
 Push-Location $testProjectDir
 try {
-    $testOut = & dotnet test $testProjectFile --no-build 2>&1
+    $testOut = & dotnet test $testProjectFile 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Baseline unit tests failed! Fix test failures before running mutation testing:" -ForegroundColor Red
         $testOut | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
@@ -79,11 +82,15 @@ try {
 
 # 4. Assemble Stryker Arguments & Execute
 Write-Host "`n[3/4] Running dotnet Stryker mutation analysis..." -ForegroundColor Yellow
-$strykerArgs = @("stryker", "-r", "ClearText", "-r", "Json", "-r", "Html", "-b", "$Threshold")
+$strykerArgs = @("stryker", "--project", "InvoiceApp.Domain.csproj", "-r", "ClearText", "-r", "Json", "-r", "Html", "-b", "$Threshold")
 
 if (-not $Full) {
-    Write-Host "Mode: Differential mutation testing (target: $TargetBranch)" -ForegroundColor Cyan
-    $strykerArgs += "--since:$TargetBranch"
+    $sinceRef = if ($Since) {
+        $resolved = & git rev-parse $Since 2>$null
+        if ($resolved) { $resolved.Trim() } else { $Since }
+    } else { $TargetBranch }
+    Write-Host "Mode: Differential mutation testing (target: $sinceRef)" -ForegroundColor Cyan
+    $strykerArgs += "--since:$sinceRef"
 } else {
     Write-Host "Mode: Full mutation testing (entire domain model)" -ForegroundColor Cyan
 }

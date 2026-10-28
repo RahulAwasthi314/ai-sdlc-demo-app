@@ -2,11 +2,12 @@ namespace InvoiceApp.Domain;
 
 /// <summary>
 /// Moves an invoice through its lifecycle: Draft -> PendingApproval -> Approved or Rejected.
-/// Enforces role-based limits (e.g. Manager limit of 50,000) and segregation of duties.
+/// Enforces role-based limits (e.g. Manager limit of 50,000, Director limit of 500,000) and segregation of duties.
 /// </summary>
 public class ApprovalService
 {
     public const decimal ManagerApprovalLimit = 50000m;
+    public const decimal DirectorApprovalLimit = 500000m;
 
     private readonly IInvoiceRepository _repository;
 
@@ -34,8 +35,15 @@ public class ApprovalService
     {
         var invoice = Find(invoiceId);
         EnsurePending(invoice);
+
+        if (invoice.Approvers.Contains(approver, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The same user may never count as both approvers on one invoice.");
+        }
+
         ValidateDecisionAuthority(invoice, role, "approval");
 
+        invoice.Approvers.Add(approver);
         invoice.Status = InvoiceStatus.Approved;
         invoice.DecidedBy = approver;
         invoice.DecidedAt = DateTime.UtcNow;
@@ -86,6 +94,12 @@ public class ApprovalService
         {
             throw new ApprovalLimitExceededException(
                 $"Manager {action} limit exceeded: invoice amount {invoice.Amount:F2} exceeds authorized threshold of {ManagerApprovalLimit:F2}.");
+        }
+
+        if (string.Equals(role, "Director", StringComparison.OrdinalIgnoreCase) && invoice.Amount > DirectorApprovalLimit)
+        {
+            throw new ApprovalLimitExceededException(
+                $"Director {action} limit exceeded: invoice amount {invoice.Amount:F2} exceeds authorized threshold of {DirectorApprovalLimit:F2}.");
         }
     }
 }

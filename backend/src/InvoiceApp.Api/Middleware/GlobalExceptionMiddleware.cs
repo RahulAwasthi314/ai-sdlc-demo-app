@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using InvoiceApp.Api.Models;
+using InvoiceApp.Domain;
 
 namespace InvoiceApp.Api.Middleware;
 
@@ -36,7 +37,12 @@ public class GlobalExceptionMiddleware
         var (statusCode, code, message) = exception switch
         {
             KeyNotFoundException knf => (HttpStatusCode.NotFound, "NOT_FOUND", knf.Message),
+            ApprovalLimitExceededException ale => (HttpStatusCode.BadRequest, "LIMIT_EXCEEDED", ale.Message),
             ArgumentException ae => (HttpStatusCode.BadRequest, "BAD_REQUEST", ae.Message),
+            InvalidOperationException ioe when ioe.Message.Contains("The same user may never count as both approvers on one invoice", StringComparison.OrdinalIgnoreCase)
+                => (HttpStatusCode.BadRequest, "SAME_APPROVER_NOT_ALLOWED", ioe.Message),
+            InvalidOperationException ioe when ioe.Message.Contains("Administrators are not authorized to decide invoices", StringComparison.OrdinalIgnoreCase)
+                => (HttpStatusCode.BadRequest, "ROLE_NOT_PERMITTED", ioe.Message),
             InvalidOperationException ioe => (HttpStatusCode.Conflict, "CONFLICT", ioe.Message),
             UnauthorizedAccessException uae => (HttpStatusCode.Unauthorized, "UNAUTHORIZED", uae.Message),
             _ => (HttpStatusCode.InternalServerError, "INTERNAL_ERROR", "An unexpected internal server error occurred.")
