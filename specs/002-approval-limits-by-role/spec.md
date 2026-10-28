@@ -6,7 +6,7 @@
 
 **Status**: Ready for Planning
 
-**Input**: User description: "Add approval limits by role to the invoice approval service in ai-sdlc-demo-app: • A Manager may approve invoices up to 50,000."
+**Input**: User description: "Add approval limits by role to the invoice approval service in ai-sdlc-demo-app: • A Manager may approve invoices up to 50,000. • A Director may approve invoices up to 500,000."
 
 ## Clarifications
 
@@ -62,7 +62,7 @@ An employee user navigates to the `/invoices` route. The employee sees the list 
 
 ### User Story 4 - Manager Handling Capped at 50,000 for Both Approval and Rejection (Priority: P2)
 
-A user logged in with the Manager role reviews an invoice exceeding 50,000 on `/approvals`. Because Manager authority is strictly capped at 50,000 for decision actions, the Manager cannot approve or reject the invoice; high-value invoices must be escalated or handled by higher operational tiers.
+A user logged in with the Manager role reviews an invoice exceeding 50,000 on `/approvals`. Because Manager authority is strictly capped at 50,000 for decision actions, the Manager cannot approve or reject the invoice; high-value invoices must be escalated or handled by higher operational tiers (e.g. Director).
 
 **Why this priority**: Ensures consistent authority delegation: managers only handle invoices within their financial delegation scope.
 
@@ -75,7 +75,23 @@ A user logged in with the Manager role reviews an invoice exceeding 50,000 on `/
 
 ---
 
-### User Story 5 - Segregation of Duties: Route Guards Enforce Role Separation (Priority: P3)
+### User Story 5 - Director Approves Invoices Up To 500,000 via `/approvals` (Priority: P1)
+
+A user logged in with the Director role navigates to the dedicated `/approvals` route. The Director reviews pending invoices with amounts up to 500,000 (including high-value invoices between 50,000 and 500,000 that exceed a Manager's authority). The Director approves the invoice, transitioning its status to Approved. If an invoice exceeds 500,000, the approval is blocked with HTTP 400 and code `LIMIT_EXCEEDED`.
+
+**Why this priority**: Enables high-tier financial sign-offs up to 500,000 without bottlenecks while enforcing executive spending ceilings.
+
+**Independent Test**: Can be tested independently by logging in as a Director, approving an invoice of 250,000 (success), and attempting to approve an invoice of 500,000.01 (blocked with HTTP 400 `LIMIT_EXCEEDED`).
+
+**Acceptance Scenarios**:
+
+1. **Given** a pending invoice with an amount of 250,000 on the `/approvals` page, **When** a Director approves the invoice, **Then** the invoice status transitions to Approved.
+2. **Given** a pending invoice with an amount of exactly 500,000, **When** a Director approves the invoice, **Then** the invoice status becomes Approved without error.
+3. **Given** a pending invoice with an amount exceeding 500,000 (e.g., 500,000.01), **When** a Director attempts to approve or reject the invoice, **Then** the action is blocked with HTTP 400 `LIMIT_EXCEEDED` and the invoice remains in PendingApproval status.
+
+---
+
+### User Story 6 - Segregation of Duties: Route Guards Enforce Role Separation (Priority: P3)
 
 The application enforces strict separation between employee application tasks and manager approval tasks using Angular Route Guards:
 - Managers are blocked from accessing the employee `/invoices` creation route.
@@ -95,10 +111,10 @@ The application enforces strict separation between employee application tasks an
 
 ### Edge Cases
 
-- **Exact Limit Boundary**: An invoice with an amount of exactly 50,000.00 MUST be approvable and rejectable by a Manager; an invoice with an amount of 50,000.01 MUST be blocked.
+- **Exact Limit Boundary**: An invoice with an amount of exactly 50,000.00 MUST be approvable and rejectable by a Manager; an invoice with an amount of 50,000.01 MUST be blocked for a Manager. Similarly, an invoice with an amount of exactly 500,000.00 MUST be approvable and rejectable by a Director; an invoice with an amount of 500,000.01 MUST be blocked for a Director.
 - **Negative or Zero Amounts**: Invoices with zero or negative amounts should not be created or approved without proper validation.
 - **Non-Pending Invoices**: Attempting to approve an invoice that is in Draft, Approved, or Rejected status MUST fail with a conflict error (409) before limit validation is evaluated.
-- **Missing or Unrecognized Roles**: Users without the Manager role MUST NOT be permitted to invoke approval actions.
+- **Missing or Unrecognized Roles**: Users without an authorized approver role (Manager, Director) MUST NOT be permitted to invoke approval actions.
 
 ## Requirements *(mandatory)*
 
@@ -108,17 +124,21 @@ The application enforces strict separation between employee application tasks an
 - **FR-002**: System MUST permit users with the Manager role to approve pending invoices whose total amount is less than or equal to 50,000.
 - **FR-003**: System MUST permit users with the Manager role to reject pending invoices whose total amount is less than or equal to 50,000 with a mandatory reason note.
 - **FR-004**: System MUST prevent users with the Manager role from approving or rejecting pending invoices whose total amount exceeds 50,000, leaving the invoice in PendingApproval status.
-- **FR-005**: System MUST return HTTP 400 Bad Request wrapped in `ApiErrorDto` with code `LIMIT_EXCEEDED` whenever a Manager attempts to approve or reject an invoice exceeding 50,000, detailing the threshold and the invoice amount.
-- **FR-006**: System MUST enforce segregation of duties such that the Admin role is not authorized to approve business invoices.
-- **FR-007**: System MUST record the decider identity, role, and timestamp in the invoice audit trail when an approval or rejection succeeds.
-- **FR-008**: Frontend Angular application (`InvoiceAppFE`) MUST provide a dedicated `/invoices` route for employee users to create and manage their invoices.
-- **FR-009**: Frontend Angular application (`InvoiceAppFE`) MUST provide a dedicated `/approvals` route for manager users to review pending invoices and execute decisions within their 50,000 threshold.
-- **FR-010**: Frontend Angular application MUST protect `/invoices` and `/approvals` routes using Angular Route Guards according to authenticated user role.
+- **FR-005**: System MUST enforce a monetary limit of 500,000 for users with the Director role on invoice decision actions.
+- **FR-006**: System MUST permit users with the Director role to approve pending invoices whose total amount is less than or equal to 500,000.
+- **FR-007**: System MUST permit users with the Director role to reject pending invoices whose total amount is less than or equal to 500,000 with a mandatory reason note.
+- **FR-008**: System MUST prevent users with the Director role from approving or rejecting pending invoices whose total amount exceeds 500,000, leaving the invoice in PendingApproval status.
+- **FR-009**: System MUST return HTTP 400 Bad Request wrapped in `ApiErrorDto` with code `LIMIT_EXCEEDED` whenever a Manager or Director attempts to approve or reject an invoice exceeding their authorized limit (50,000 for Manager, 500,000 for Director).
+- **FR-010**: System MUST enforce segregation of duties such that the Admin role is not authorized to approve business invoices.
+- **FR-011**: System MUST record the decider identity, role, and timestamp in the invoice audit trail when an approval or rejection succeeds.
+- **FR-012**: Frontend Angular application (`InvoiceAppFE`) MUST provide a dedicated `/invoices` route for employee users to create and manage their invoices.
+- **FR-013**: Frontend Angular application (`InvoiceAppFE`) MUST provide a dedicated `/approvals` route for approver users (Manager, Director) to review pending invoices and execute decisions within their role thresholds.
+- **FR-014**: Frontend Angular application MUST protect `/invoices` and `/approvals` routes using Angular Route Guards according to authenticated user role.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Invoice**: Represents a billing document. Key attributes: `Id`, `CustomerName`, `Amount`, `Status` (Draft, PendingApproval, Approved, Rejected), `CreatedAt`, `DecidedBy`, `DecidedAt`, `DecisionNote`.
-- **ApprovalRoleLimit**: Represents the monetary authorization policy. Key attributes: `RoleName` (Manager), `MaxHandlingAmount` (50,000.00).
+- **ApprovalRoleLimit**: Represents the monetary authorization policy. Key attributes: `RoleName` (`Manager`, `Director`), `MaxHandlingAmount` (50,000.00 for Manager, 500,000.00 for Director).
 - **ApiErrorDto**: Generic response representation for errors. Attributes: `Error`, `Code`, `Status`, `Details`.
 
 ## Success Criteria *(mandatory)*
@@ -126,9 +146,10 @@ The application enforces strict separation between employee application tasks an
 ### Measurable Outcomes
 
 - **SC-001**: 100% of invoice decision attempts by a Manager for amounts over 50,000 are blocked without changing the invoice status.
-- **SC-002**: 100% of invoice approval attempts by a Manager for amounts up to 50,000 succeed on the first attempt when in pending status.
-- **SC-003**: Users receive clear, descriptive feedback in under 500ms via `ApiErrorDto` with code `LIMIT_EXCEEDED` when monetary thresholds are exceeded.
-- **SC-004**: 100% of protected routes (`/invoices`, `/approvals`) reject unauthorized access attempts according to role permissions.
+- **SC-002**: 100% of invoice decision attempts by a Director for amounts over 500,000 are blocked without changing the invoice status.
+- **SC-003**: 100% of invoice approval attempts by a Manager (up to 50,000) or Director (up to 500,000) succeed on the first attempt when in pending status.
+- **SC-004**: Users receive clear, descriptive feedback in under 500ms via `ApiErrorDto` with code `LIMIT_EXCEEDED` when monetary thresholds are exceeded.
+- **SC-005**: 100% of protected routes (`/invoices`, `/approvals`) reject unauthorized access attempts according to role permissions.
 
 ## Assumptions
 

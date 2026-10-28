@@ -1,39 +1,49 @@
 # Research & Design Decisions: Approval Limits by Role
 
-## Decision 1: Domain-Driven Limit Enforcement
-- **Decision**: Embed role-based approval limits directly inside `InvoiceApp.Domain` (e.g. `ApprovalPolicy` / `ApprovalService`), passing the user's role and identity from the API layer.
-- **Rationale**: Principle III of the constitution states: "Business rules MUST live in the Domain project; controllers MUST NOT contain business logic." Enforcing the 50,000 Manager limit in the Domain ensures tests can validate limits purely in memory without spinning up HTTP pipelines.
+## Decision 1: Domain-Driven Limit Enforcement (Manager & Director)
+- **Decision**: Embed role-based approval limits directly inside `InvoiceApp.Domain` (in `ApprovalService.cs` or dedicated `ApprovalRoleLimits`), defining:
+  - `ManagerApprovalLimit`: 50,000.00
+  - `DirectorApprovalLimit`: 500,000.00
+  The user's role and username are supplied to `ApprovalService.Approve` and `ApprovalService.Reject`.
+- **Rationale**: Principle III of the constitution requires: "Business rules MUST live in the Domain project; controllers MUST NOT contain business logic." Enforcing both the 50,000 Manager limit and the 500,000 Director limit in the Domain ensures tests can validate boundaries and authority logic purely in unit tests.
 - **Alternatives Considered**: 
-  - *Controller validation*: Rejected because it violates the constitution and leaks business logic into the API presentation layer.
+  - *Controller validation*: Rejected because it violates the constitution and leaks business logic into presentation/API controllers.
   - *ActionFilter attribute*: Rejected because monetary limits require access to the loaded invoice entity and amount from repository.
 
 ## Decision 2: Segregation of Duties for Admin Role
-- **Decision**: Admin role is strictly restricted from executing `Approve` or `Reject` on business invoices. Invoices must be approved by designated business operational roles (e.g. `Manager` up to 50,000, or `Approver`).
-- **Rationale**: Confirmed by the stakeholder clarification and internal controls auditing standards. Administrators manage configurations and users, but should not sign off on financial disbursements.
+- **Decision**: The `Admin` role is strictly restricted from executing `Approve` or `Reject` on business invoices. Invoices must be decided by designated operational roles: `Manager` (up to 50,000), `Director` (up to 500,000), or `Approver`.
+- **Rationale**: Confirmed by stakeholder requirements and internal financial controls standards. Administrators manage system configurations, users, and maintenance, but cannot approve financial disbursements.
 - **Alternatives Considered**:
-  - *Unlimited approval for Admin*: Rejected per explicit user guidance: "admin should not be authorized to approve invoices".
+  - *Unlimited approval for Admin*: Rejected per explicit governance and constitution requirements.
 
-## Decision 3: Rejection Limit Scope
-- **Decision**: Managers are capped at 50,000 for all decision actions (both `Approve` and `Reject`).
-- **Rationale**: User clarification confirmed: "manager can only handle till 50000". High-value invoices exceeding 50,000 cannot be decided by a Manager; they must be handled by higher operational tiers.
+## Decision 3: Decision Limits Apply to Both Approval and Rejection
+- **Decision**: Both `Manager` and `Director` roles have their authority capped for all decision actions (`Approve` and `Reject`) at 50,000.00 and 500,000.00 respectively.
+- **Rationale**: An approver cannot make unilateral disposition decisions (including rejection) on invoices exceeding their delegation authority. Invoices above 50,000 must be handled by a Director or higher authority; invoices above 500,000 exceed local authorization limits.
 - **Alternatives Considered**:
-  - *Permit Manager to reject any amount*: Rejected per user decision.
+  - *Allow unlimited rejection*: Rejected because rejecting an invoice is an authoritative determination reserved for authorized budget holders.
 
 ## Decision 4: Error Handling and REST Representation
-- **Decision**: When a Manager attempts to approve or reject an invoice exceeding 50,000, the service throws an `ArgumentException` (or dedicated `ApprovalLimitExceededException`), which maps to HTTP `400 Bad Request` with an `ApiErrorDto`:
+- **Decision**: When a decision exceeds the caller's role limit, `ApprovalService` throws an `ApprovalLimitExceededException` (or `ArgumentException`). Global exception middleware maps this to HTTP `400 Bad Request` with an `ApiErrorDto`:
   ```json
   {
-    "error": "Manager approval limit exceeded: invoice amount 60000.00 exceeds authorized threshold of 50000.00.",
+    "error": "Director approval limit exceeded: invoice amount 550000.00 exceeds authorized threshold of 500000.00.",
     "code": "LIMIT_EXCEEDED",
     "status": 400
   }
   ```
-- **Rationale**: Conforms to REST guidelines, user clarification choice A3, and the existing `ApiErrorDto` guardrail enforced by the Antigravity lifecycle hook.
+- **Rationale**: Conforms to REST guidelines, Constitution Principle VI, and the required `ApiErrorDto` schema.
 - **Alternatives Considered**:
-  - *403 Forbidden*: Rejected per clarification selection A3.
+  - *HTTP 403 Forbidden*: Rejected because 403 is for endpoint authorization violations; 400 Bad Request with code `LIMIT_EXCEEDED` describes business rule rejection where the user has the Approver role but the resource payload exceeds their delegated financial limit.
 
-## Decision 5: User Interface and E2E Testing
-- **Decision**: 
-  - Update `backend/src/InvoiceApp.Api/wwwroot/app.js` and `index.html` to support `Manager` role (`demo.manager` credentials added to `appsettings.json`), display role limits in the UI, and present graceful error alerts when approval is denied.
-  - Add Playwright Page Objects (`LoginPage`, `InvoicesPage`, `ApprovalsPage`) and a test in `e2e/tests/rejected-overlimit-approval.spec.ts` using role-based locators (`getByRole`, `getByLabel`).
-- **Rationale**: Satisfies AGENTS.md and Constitution requirements: E2E tests must use page objects and semantic role locators, zero CSS or XPath selectors.
+## Decision 5: Angular Frontend & Role-Based Navigation
+- **Decision**:
+  - The Angular frontend (`InvoiceAppFE`) provides:
+    - `/invoices` for `Employee` (create and view invoices).
+    - `/approvals` for `Manager` and `Director` (view pending invoices, execute Approve/Reject with limits displayed in UI).
+  - Role-based route guards (`authGuard`, `roleGuard`) enforce access control.
+  - Demo accounts in `appsettings.json` and frontend session:
+    - `demo.employee` / `ChangeMe123!` (Role: Employee)
+    - `demo.manager` / `ChangeMe123!` (Role: Manager, Limit: $50,000)
+    - `demo.director` / `ChangeMe123!` (Role: Director, Limit: $500,000)
+    - `demo.admin` / `ChangeMe123!` (Role: Admin)
+- **Rationale**: Enforces Constitution Principles I, II, III, and V, ensuring accessible UI with clear limit context and robust route protection.
