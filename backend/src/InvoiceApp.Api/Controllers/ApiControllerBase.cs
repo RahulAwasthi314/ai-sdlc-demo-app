@@ -19,6 +19,16 @@ public abstract class ApiControllerBase : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            if (ex.Message.Contains("The same user may never count as both approvers on one invoice", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new ApiErrorDto(ex.Message, "SAME_APPROVER_NOT_ALLOWED", 400));
+            }
+
+            if (ex.Message.Contains("Administrators are not authorized to decide invoices", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new ApiErrorDto(ex.Message, "ROLE_NOT_PERMITTED", 400));
+            }
+
             return Conflict(new ApiErrorDto(ex.Message, "CONFLICT", 409));
         }
         catch (ApprovalLimitExceededException ex)

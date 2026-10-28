@@ -69,6 +69,20 @@
           "path": ["api", "approvals", "INV-999", "approve"]
         }
       }
+    },
+    {
+      "name": "Approvals - Blocked Duplicate Approver (SAME_APPROVER_NOT_ALLOWED)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/approvals/INV-1006/approve",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "approvals", "INV-1006", "approve"]
+        }
+      }
     }
   ],
   "variable": [
@@ -76,4 +90,3 @@
     { "key": "token", "value": "" }
   ]
 }
-

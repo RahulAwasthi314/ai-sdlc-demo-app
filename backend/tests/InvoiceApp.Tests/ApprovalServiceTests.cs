@@ -246,4 +246,62 @@ public class ApprovalServiceTests
         Assert.Contains("Director rejection limit exceeded", ex.Message);
         Assert.Contains("500000.00", ex.Message);
     }
+
+    [Fact]
+    public void Approve_WhenSameUserAttemptsSecondApproval_ThrowsInvalidOperationExceptionAndInvoiceUnchanged()
+    {
+        var invoice = InvoiceWith("INV-DUAL-1", InvoiceStatus.PendingApproval, 75000m);
+        invoice.Approvers.Add("demo.approver1");
+        var repository = new FakeInvoiceRepository(invoice);
+        var service = new ApprovalService(repository);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            service.Approve("INV-DUAL-1", "demo.approver1", "Approver"));
+
+        Assert.Equal("The same user may never count as both approvers on one invoice.", ex.Message);
+
+        var repoInvoice = repository.GetById("INV-DUAL-1")!;
+        Assert.Equal(InvoiceStatus.PendingApproval, repoInvoice.Status);
+        Assert.Null(repoInvoice.DecidedBy);
+        Assert.Null(repoInvoice.DecidedAt);
+        Assert.Single(repoInvoice.Approvers);
+        Assert.Equal("demo.approver1", repoInvoice.Approvers[0]);
+    }
+
+    [Fact]
+    public void Approve_WhenSameUserAttemptsSecondApprovalWithDifferentCase_ThrowsInvalidOperationException()
+    {
+        var invoice = InvoiceWith("INV-DUAL-1C", InvoiceStatus.PendingApproval, 75000m);
+        invoice.Approvers.Add("demo.approver1");
+        var repository = new FakeInvoiceRepository(invoice);
+        var service = new ApprovalService(repository);
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            service.Approve("INV-DUAL-1C", "DEMO.APPROVER1", "Approver"));
+
+        Assert.Equal("The same user may never count as both approvers on one invoice.", ex.Message);
+    }
+
+    [Fact]
+    public void Approve_WhenDistinctSecondApproverApproves_TransitionsToApprovedAndRecordsBothApprovers()
+    {
+        var invoice = InvoiceWith("INV-DUAL-2", InvoiceStatus.PendingApproval, 75000m);
+        invoice.Approvers.Add("demo.approver1");
+        var repository = new FakeInvoiceRepository(invoice);
+        var service = new ApprovalService(repository);
+
+        var result = service.Approve("INV-DUAL-2", "demo.director", "Director");
+
+        Assert.Equal(InvoiceStatus.Approved, result.Status);
+        Assert.Equal("demo.director", result.DecidedBy);
+        Assert.NotNull(result.DecidedAt);
+        Assert.Equal(2, result.Approvers.Count);
+        Assert.Equal("demo.approver1", result.Approvers[0]);
+        Assert.Equal("demo.director", result.Approvers[1]);
+
+        var repoInvoice = repository.GetById("INV-DUAL-2")!;
+        Assert.Equal(InvoiceStatus.Approved, repoInvoice.Status);
+        Assert.Equal("demo.director", repoInvoice.DecidedBy);
+        Assert.Equal(2, repoInvoice.Approvers.Count);
+    }
 }

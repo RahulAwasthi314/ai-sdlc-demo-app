@@ -35,8 +35,15 @@ public class ApprovalService
     {
         var invoice = Find(invoiceId);
         EnsurePending(invoice);
+
+        if (invoice.Approvers.Contains(approver, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The same user may never count as both approvers on one invoice.");
+        }
+
         ValidateDecisionAuthority(invoice, role, "approval");
 
+        invoice.Approvers.Add(approver);
         invoice.Status = InvoiceStatus.Approved;
         invoice.DecidedBy = approver;
         invoice.DecidedAt = DateTime.UtcNow;

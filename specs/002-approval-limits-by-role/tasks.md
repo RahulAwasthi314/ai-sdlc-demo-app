@@ -1,5 +1,5 @@
 ---
-description: "Task list for Approval Limits by Role (Manager & Director)"
+description: "Task list for Approval Limits by Role & Dual Approver Segregation"
 ---
 
 # Tasks: Approval Limits by Role & Frontend Architecture
@@ -10,7 +10,7 @@ description: "Task list for Approval Limits by Role (Manager & Director)"
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3, US4, US5, US6)
+- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3, US4, US5, US6, US7)
 - File paths are exact repository-relative paths
 
 ---
@@ -148,11 +148,30 @@ description: "Task list for Approval Limits by Role (Manager & Director)"
 - [X] T036 [US6] Configure guarded route paths in `InvoiceAppFE/src/app/app.routes.ts` protecting `/invoices` and `/approvals`.
 - [X] T037 [P] [US6] Add Vitest unit tests in `InvoiceAppFE/src/app/core/guards/role.guard.spec.ts` verifying unauthorized route redirections.
 
-**Checkpoint**: All user stories functional and protected by role-based guards.
+---
+
+## Phase 9: User Story 7 - Dual Approver Segregation: Same User Cannot Be Both Approvers (Priority: P2)
+
+**Goal**: The same user may never count as both approvers on one invoice. When a multi-approval invoice requires two approvers, a second approval attempt by the first approver is rejected with a clear reason (`SAME_APPROVER_NOT_ALLOWED`), and nothing about the invoice changes.
+
+**Independent Test**: Create an invoice with initial approval by `demo.approver1`. Attempt second approval with `demo.approver1`. Verify HTTP 400 Bad Request with code `SAME_APPROVER_NOT_ALLOWED` is returned, and invoice state, timestamp, and existing approver remain unchanged.
+
+### Tests for User Story 7
+- [X] T044 [P] [US7] Add unit tests in `backend/tests/InvoiceApp.Tests/ApprovalServiceTests.cs` verifying that when a second approval is attempted by the same user who provided the first approval, `InvalidOperationException` is thrown with message "The same user may never count as both approvers on one invoice.", and verifying that status, timestamp, and existing approver remain completely unchanged.
+- [X] T045 [P] [US7] Add unit test in `backend/tests/InvoiceApp.Tests/ApprovalServiceTests.cs` verifying that when a second approval is provided by a distinct authorized approver, the invoice successfully transitions to fully `Approved` with both approvers recorded.
+
+### Implementation for User Story 7
+- [X] T046 [US7] Update `Invoice` domain entity in `backend/src/InvoiceApp.Domain/Invoice.cs` to add `List<string> Approvers` for multi-approver tracking, defaulting to an empty list.
+- [X] T047 [US7] Update `ApprovalService.Approve` in `backend/src/InvoiceApp.Domain/ApprovalService.cs` to enforce the dual-approval segregation check: if `invoice.Approvers.Contains(approver)`, throw `InvalidOperationException` with reason "The same user may never count as both approvers on one invoice." before modifying any invoice properties.
+- [X] T048 [US7] Update `GlobalExceptionMiddleware.cs` in `backend/src/InvoiceApp.Api/Middleware/GlobalExceptionMiddleware.cs` and `ApiControllerBase.cs` to map "The same user may never count as both approvers on one invoice." to HTTP 400 Bad Request with `code: SAME_APPROVER_NOT_ALLOWED`.
+- [X] T049 [P] [US7] Add Vitest unit test in `InvoiceAppFE/src/app/features/approvals/pending-approvals.component.spec.ts` verifying that when an approval returns `SAME_APPROVER_NOT_ALLOWED`, the error is rendered gracefully in the alert banner and the pending invoice list item is preserved.
+- [X] T050 [P] [US7] Create Playwright E2E test in `e2e/tests/dual-approver-segregation.spec.ts` verifying that attempting a duplicate approval by the same user triggers the error banner and leaves the invoice in pending state.
+
+**Checkpoint**: Dual-approver segregation fully functional, tested, and protected against duplicate sign-offs.
 
 ---
 
-## Phase 9: Polish, Quality Gates & Deliverables
+## Phase 10: Polish, Quality Gates & Deliverables
 
 **Purpose**: Cross-cutting quality checks, Stryker mutation testing gate, and constitution deliverables.
 
@@ -162,6 +181,11 @@ description: "Task list for Approval Limits by Role (Manager & Director)"
 - [X] T041 [P] Generate Backend and Frontend Postman Collections with test data sets in `docs/features/002-approval-limits-by-role/deliverables/backend.postman_collection.json` and `docs/features/002-approval-limits-by-role/deliverables/frontend.postman_collection.json`.
 - [X] T042 Execute Stryker mutation testing on `InvoiceApp.Domain` and kill all surviving mutants to ensure $\ge$ 80% mutation score.
 - [X] T043 Execute full verification suite (`dotnet test backend/InvoiceApp.sln`, `npm test` in `InvoiceAppFE`, `npm test` in `e2e`).
+- [X] T051 [P] Update Sequence and UML diagrams in `docs/features/002-approval-limits-by-role/deliverables/sequence-and-uml.md` to reflect dual approver rejection and state preservation.
+- [X] T052 [P] Update `PRD.md` and `BRD.md` in `docs/features/002-approval-limits-by-role/deliverables/` to document the dual approver segregation rule and KPIs.
+- [X] T053 [P] Add dual approver test scenario to `backend.postman_collection.json` in `docs/features/002-approval-limits-by-role/deliverables/backend.postman_collection.json`.
+- [X] T054 Execute Stryker mutation testing on `InvoiceApp.Domain` ensuring $\ge$ 80% mutation score on new multi-approver validation logic.
+- [X] T055 Run full regression verification across backend, frontend, and E2E test suites.
 
 ---
 
@@ -169,45 +193,32 @@ description: "Task list for Approval Limits by Role (Manager & Director)"
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependencies - can start immediately.
-- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories.
-- **User Stories (Phase 3+)**: All depend on Foundational phase completion.
-  - User stories can proceed in parallel or sequentially in priority order (P1 $\rightarrow$ P2 $\rightarrow$ P3).
-- **Polish & Deliverables (Phase 9)**: Depends on user stories completion.
+- **Setup (Phase 1)**: Completed `[X]`.
+- **Foundational (Phase 2)**: Completed `[X]`.
+- **User Stories 1 - 6 (Phases 3 - 8)**: Completed `[X]`.
+- **User Story 7 (Phase 9)**: Depends on Foundational & Core ApprovalService (`T044` $\rightarrow$ `T050`).
+- **Phase 10 (Polish & Quality Gates)**: Depends on User Story 7 completion.
 
-### User Story Dependencies
-
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories.
-- **User Story 2 (P1)**: Extends US1 with over-limit error boundary handling.
-- **User Story 3 (P1)**: Can proceed in parallel with US1/US2 (Employee invoice submission flow).
-- **User Story 4 (P2)**: Depends on US1/US2 (adds Rejection limit checks).
-- **User Story 5 (P1)**: Extends US1/US2/US4 (adds Director limit up to 500,000.00).
-- **User Story 6 (P3)**: Guards routes for US1, US3, and US5.
+### Within User Story 7
+- `T044`, `T045`: Unit tests written first and verified failing before implementation.
+- `T046`: Domain model update (`Invoice.cs`).
+- `T047`: Domain logic implementation (`ApprovalService.cs`).
+- `T048`: API exception mapping.
+- `T049`: Frontend unit test.
+- `T050`: Playwright E2E scenario.
 
 ### Parallel Opportunities
-
-- Within Phase 1: `T002`, `T003` can run in parallel.
-- Within Phase 2: `T005`, `T006`, `T008` can run in parallel.
-- User Story 1 & User Story 3 can proceed concurrently across backend and frontend.
-- Within each story, test tasks marked `[P]` can be authored in parallel.
-- Deliverables tasks `T038`, `T039`, `T040`, `T041` can run in parallel.
+- `T044`, `T045` unit tests can run in parallel.
+- `T049` (Vitest) and `T050` (Playwright) can be authored in parallel once domain logic is implemented.
+- `T051`, `T052`, `T053` documentation tasks can run concurrently.
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (User Story 1 Only)
-1. Complete Phase 1: Setup (`T001` - `T003`)
-2. Complete Phase 2: Foundational (`T004` - `T008`)
-3. Complete Phase 3: User Story 1 (`T009` - `T013`)
-4. **STOP and VALIDATE**: Test Manager approvals up to $50,000.00.
-
-### Incremental Delivery
-1. Foundation Ready $\rightarrow$ Setup + Foundational
-2. Add US1 (Manager Approval $\le$ $50,000$) $\rightarrow$ Test MVP
-3. Add US2 (Manager Over-Limit Rejection $\le$ $50,000$) $\rightarrow$ Validate HTTP 400
-4. Add US3 (Employee Invoice Application) $\rightarrow$ Validate `/invoices`
-5. Add US4 (Manager Rejection with Reason) $\rightarrow$ Validate rejection limits
-6. Add US5 (Director Approval $\le$ $500,000$) $\rightarrow$ Validate Director tier
-7. Add US6 (Role Route Guards & Segregation of Duties) $\rightarrow$ Validate route protection
-8. Execute Phase 9 (Stryker mutation gate $\ge$ 80%, docs deliverables, full regression)
+### Incremental Delivery for User Story 7
+1. Write negative test `T044` (same user second approval attempt $\rightarrow$ throws error, invoice unchanged) and positive test `T045` (distinct second approver $\rightarrow$ approved).
+2. Update `Invoice.cs` (`T046`) and `ApprovalService.cs` (`T047`).
+3. Wire API mapping (`T048`).
+4. Validate frontend error handling (`T049`) and E2E flow (`T050`).
+5. Run Stryker mutation gate (`T054`) and full regression test suite (`T055`).

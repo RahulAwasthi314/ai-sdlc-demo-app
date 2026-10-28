@@ -13,6 +13,7 @@
   - `DecidedBy`: string? (Username of approving or rejecting user)
   - `DecidedAt`: DateTime? (Timestamp of decision)
   - `DecisionNote`: string? (Rejection reason or approval commentary)
+  - `Approvers`: `List<string>` (List of usernames who have approved this invoice)
 
 ### 2. ApprovalRoleLimits (Domain Policy / Configuration)
 - **Path**: `backend/src/InvoiceApp.Domain/ApprovalLimits.cs` or `ApprovalService.cs`
@@ -21,6 +22,7 @@
   - `MaxHandlingAmount`: decimal? (50,000.00 for `Manager`, 500,000.00 for `Director`, null/unlimited for global approvers)
   - `CanApprove`: bool (`true` for `Manager`, `Director`, `Approver`; `false` for `Admin`)
   - `CanReject`: bool (`true` for `Manager`, `Director`, `Approver`; `false` for `Admin`)
+  - `DisallowSameUserMultiApproval`: bool (`true`: the same user may never count as both approvers on one invoice)
 
 ### 3. ApiErrorDto (API Contract)
 - **Path**: `backend/src/InvoiceApp.Api/Models/ApiErrorDto.cs`

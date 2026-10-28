@@ -109,6 +109,22 @@ The application enforces strict separation between employee application tasks an
 
 ---
 
+### User Story 7 - Dual Approver Segregation: Same User Never Counts As Both Approvers (Priority: P2)
+
+In workflows requiring dual or multiple approvals on an invoice, the system enforces that the second approval must be provided by a different authorized user. If the user who provided the first approval attempts to approve the invoice a second time, the system immediately halts the operation, returns a clear explanatory reason via `ApiErrorDto` (`SAME_APPROVER_NOT_ALLOWED`), and guarantees that nothing about the invoice changes (the invoice remains in its pending second approval state, preserving the initial approver and timestamp intact).
+
+**Why this priority**: Critical financial internal control preventing single-person collusion or bypass of multi-signature governance.
+
+**Independent Test**: Can be tested independently by recording a first approval from User A, attempting a second approval with User A, and verifying that HTTP 400 `SAME_APPROVER_NOT_ALLOWED` is returned and the invoice remains unchanged.
+
+**Acceptance Scenarios**:
+
+1. **Given** an invoice with an initial approval recorded from `userA`, **When** `userA` attempts to provide the second approval, **Then** the attempt is rejected with HTTP 400 Bad Request and error code `SAME_APPROVER_NOT_ALLOWED`.
+2. **Given** a rejected second approval attempt by the same user, **When** the invoice state is verified, **Then** nothing about the invoice changes (status, previous approver, and timestamps remain exactly as they were).
+3. **Given** an invoice with an initial approval recorded from `userA`, **When** a distinct authorized approver `userB` submits the second approval, **Then** the approval is accepted and the invoice transitions to fully Approved with both approvers recorded.
+
+---
+
 ### Edge Cases
 
 - **Exact Limit Boundary**: An invoice with an amount of exactly 50,000.00 MUST be approvable and rejectable by a Manager; an invoice with an amount of 50,000.01 MUST be blocked for a Manager. Similarly, an invoice with an amount of exactly 500,000.00 MUST be approvable and rejectable by a Director; an invoice with an amount of 500,000.01 MUST be blocked for a Director.
@@ -134,10 +150,13 @@ The application enforces strict separation between employee application tasks an
 - **FR-012**: Frontend Angular application (`InvoiceAppFE`) MUST provide a dedicated `/invoices` route for employee users to create and manage their invoices.
 - **FR-013**: Frontend Angular application (`InvoiceAppFE`) MUST provide a dedicated `/approvals` route for approver users (Manager, Director) to review pending invoices and execute decisions within their role thresholds.
 - **FR-014**: Frontend Angular application MUST protect `/invoices` and `/approvals` routes using Angular Route Guards according to authenticated user role.
+- **FR-015**: In dual-approver workflows, the system MUST prohibit the same user from acting as both approvers on the same invoice.
+- **FR-016**: When an approval attempt is made by the same user who already approved the invoice, the system MUST reject the attempt with HTTP 400 Bad Request mapped to `ApiErrorDto` with code `SAME_APPROVER_NOT_ALLOWED` and a clear explanatory reason.
+- **FR-017**: When a second approval attempt is rejected, the system MUST ensure nothing about the invoice changes (status, prior approvals, and timestamps are preserved).
 
 ### Key Entities *(include if feature involves data)*
 
-- **Invoice**: Represents a billing document. Key attributes: `Id`, `CustomerName`, `Amount`, `Status` (Draft, PendingApproval, Approved, Rejected), `CreatedAt`, `DecidedBy`, `DecidedAt`, `DecisionNote`.
+- **Invoice**: Represents a billing document. Key attributes: `Id`, `CustomerName`, `Amount`, `Status` (Draft, PendingApproval, Approved, Rejected), `CreatedAt`, `DecidedBy`, `DecidedAt`, `DecisionNote`, `Approvers` (list of approver usernames for multi-approval).
 - **ApprovalRoleLimit**: Represents the monetary authorization policy. Key attributes: `RoleName` (`Manager`, `Director`), `MaxHandlingAmount` (50,000.00 for Manager, 500,000.00 for Director).
 - **ApiErrorDto**: Generic response representation for errors. Attributes: `Error`, `Code`, `Status`, `Details`.
 
@@ -150,6 +169,7 @@ The application enforces strict separation between employee application tasks an
 - **SC-003**: 100% of invoice approval attempts by a Manager (up to 50,000) or Director (up to 500,000) succeed on the first attempt when in pending status.
 - **SC-004**: Users receive clear, descriptive feedback in under 500ms via `ApiErrorDto` with code `LIMIT_EXCEEDED` when monetary thresholds are exceeded.
 - **SC-005**: 100% of protected routes (`/invoices`, `/approvals`) reject unauthorized access attempts according to role permissions.
+- **SC-006**: 100% of second approval attempts by the same user on an invoice are rejected with HTTP 400 `SAME_APPROVER_NOT_ALLOWED`, leaving the invoice completely unchanged.
 
 ## Assumptions
 

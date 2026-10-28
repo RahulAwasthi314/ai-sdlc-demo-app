@@ -24,7 +24,32 @@ sequenceDiagram
     UI->>Approver: Display prominent "Decision Blocked" alert banner
 ```
 
-## 2. UML Diagram: Class & Component Structure
+## 2. Sequence Diagram: Dual Approver Segregation Rejection
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Approver as Same Approver (demo.approver)
+    participant UI as Angular SPA / ApprovalsComponent
+    participant API as ApprovalsController
+    participant Domain as ApprovalService
+    participant Repo as InMemoryInvoiceRepository
+
+    Approver->>UI: Click "Approve" (Second Approval Attempt)
+    UI->>API: POST /api/approvals/{id}/approve (Bearer Token)
+    API->>API: Validate session & RequireRole
+    API->>Domain: Approve(invoiceId, username, role)
+    Domain->>Repo: GetById(invoiceId)
+    Repo-->>Domain: invoice (Approvers contains "demo.approver")
+    Domain->>Domain: Check if invoice.Approvers contains username
+    Note over Domain: Duplicate approver detected -> throws InvalidOperationException
+    Domain-->>API: InvalidOperationException("The same user may never count as both approvers on one invoice.")
+    API-->>UI: HTTP 400 Bad Request { error: "The same user may never count as both approvers on one invoice.", code: "SAME_APPROVER_NOT_ALLOWED", status: 400 }
+    UI->>Approver: Display prominent "Decision Blocked" alert banner
+    Note over Domain,Repo: Invoice state, approvers, and timestamp remain completely unchanged
+```
+
+## 3. UML Diagram: Class & Component Structure
 
 ```mermaid
 classDiagram
@@ -37,6 +62,7 @@ classDiagram
         +string DecidedBy
         +DateTime DecidedAt
         +string DecisionNote
+        +List~string~ Approvers
     }
 
     class InvoiceStatus {
@@ -73,4 +99,3 @@ classDiagram
     ApprovalService ..> ApprovalLimitExceededException
     Invoice --> InvoiceStatus
 ```
-

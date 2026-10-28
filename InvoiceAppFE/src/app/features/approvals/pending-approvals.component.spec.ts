@@ -176,4 +176,26 @@ describe('PendingApprovalsComponent', () => {
     expect(component.decisionError()).toContain('Director approval limit exceeded');
     expect(component.decisionError()).toContain('500000.00');
   });
+
+  it('should render error alert and preserve pending invoice when approval returns SAME_APPROVER_NOT_ALLOWED', () => {
+    fixture.detectChanges();
+    httpMock.expectOne('/api/invoices').flush(mockInvoices);
+
+    expect(component.pendingInvoices().length).toBe(2);
+
+    component.onApprove('INV-201');
+
+    const approveReq = httpMock.expectOne('/api/approvals/INV-201/approve');
+    const sameApproverError: ApiErrorDto = {
+      error: 'The same user may never count as both approvers on one invoice.',
+      code: 'SAME_APPROVER_NOT_ALLOWED',
+      status: 400,
+    };
+    approveReq.flush(sameApproverError, { status: 400, statusText: 'Bad Request' });
+
+    expect(component.decisionError()).toBe('The same user may never count as both approvers on one invoice.');
+    // Ensure invoice list item is preserved
+    expect(component.pendingInvoices().length).toBe(2);
+    expect(component.pendingInvoices().some((i) => i.id === 'INV-201')).toBe(true);
+  });
 });

@@ -11,6 +11,7 @@ Enforce multi-tiered role-based approval limits and segregation of duties across
    - Enforce spending limits in Domain `ApprovalService`: `Manager` up to $50,000.00; `Director` up to $500,000.00.
    - Restrict `Admin` from approving or rejecting business invoices (segregation of duties).
    - Invoices exceeding an approver's threshold reject with HTTP 400 Bad Request mapped to `ApiErrorDto` (`code: LIMIT_EXCEEDED`).
+   - Enforce dual-approver segregation: the same user may never count as both approvers on one invoice; duplicate approval attempts reject with HTTP 400 Bad Request mapped to `ApiErrorDto` (`code: SAME_APPROVER_NOT_ALLOWED`), leaving the invoice unchanged.
 2. **Frontend (Angular 21 `InvoiceAppFE`)**: 
    - Route `/invoices` for `Employee` (create and view invoices).
    - Route `/approvals` for `Manager` and `Director` (display dynamic spending threshold badges, review pending invoices, approve or reject with reason).

@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 
-## Feature: Approval Limits by Role (Manager & Director)
+## Feature: Approval Limits by Role (Manager & Director) & Dual Approver Segregation
 - **Target Release**: v1.1.0
 - **Feature Branch**: `002-approval-limits-by-role`
 - **Owner**: Invoice App Product & Engineering Team
@@ -11,6 +11,7 @@ Introduce tiered, role-based approval limits in the invoice lifecycle to prevent
 - **Director**: Authority capped at **$500,000.00** for both approval and rejection.
 - **Admin**: Strictly prohibited from deciding business invoices (segregation of duties).
 - **Employee**: Can view invoices and submit draft invoices on a dedicated `/invoices` route.
+- **Dual Approver Segregation**: The same user may never count as both approvers on one invoice. A rejected attempt returns a clear reason (`SAME_APPROVER_NOT_ALLOWED`), and nothing about the invoice changes.
 
 ### 2. User Personas
 1. **Employee (`demo.employee`)**: Originates invoices and submits for review.
@@ -24,4 +25,4 @@ Introduce tiered, role-based approval limits in the invoice lifecycle to prevent
 - **FR-03**: Consistent error reporting returning HTTP 400 with `ApiErrorDto` and code `LIMIT_EXCEEDED`.
 - **FR-04**: Angular route guards ensuring role-segregated navigation.
 - **FR-05**: Audit trail capturing approver username, role, and timestamp upon approval or rejection.
-
+- **FR-06**: Dual approver segregation prohibiting the same user from providing multiple approvals on an invoice, returning HTTP 400 with code `SAME_APPROVER_NOT_ALLOWED` while preserving all state.
