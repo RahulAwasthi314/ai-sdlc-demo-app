@@ -17,7 +17,7 @@ export const routes: Routes = [
     path: 'approvals',
     loadComponent: () =>
       import('./features/approvals/pending-approvals.component').then((m) => m.PendingApprovalsComponent),
-    canActivate: [roleGuard(['Manager', 'Approver'])],
+    canActivate: [roleGuard(['Manager', 'Director', 'Approver'])],
   },
   {
     path: '**',

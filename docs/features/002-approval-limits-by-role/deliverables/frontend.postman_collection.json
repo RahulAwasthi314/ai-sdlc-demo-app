@@ -1,0 +1,77 @@
+{
+  "info": {
+    "name": "Frontend Invoice App Postman Collection",
+    "description": "Postman test suite for validating Angular UI endpoints, route protections, and error contract responses.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth - Login as Manager",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"demo.manager\",\n  \"password\": \"ChangeMe123!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "Invoices - Load Pending Invoices",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/invoices?status=PendingApproval",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "invoices"],
+          "query": [
+            { "key": "status", "value": "PendingApproval" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Approvals - Approve Within Manager Limit ($45k)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/approvals/INV-M1/approve",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "approvals", "INV-M1", "approve"]
+        }
+      }
+    },
+    {
+      "name": "Approvals - Manager Over-Limit Error ($60k)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/approvals/INV-M2/approve",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "approvals", "INV-M2", "approve"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "token", "value": "" }
+  ]
+}
+

@@ -1,7 +1,7 @@
 /**
  * User roles recognized by the application.
  */
-export type UserRole = 'Employee' | 'Manager' | 'Approver' | 'Admin';
+export type UserRole = 'Employee' | 'Manager' | 'Director' | 'Approver' | 'Admin';
 
 /**
  * User session state persisted for authenticated communication.

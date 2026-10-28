@@ -191,4 +191,59 @@ public class ApprovalServiceTests
         Assert.Equal(InvoiceStatus.Approved, result.Status);
         Assert.Equal("demo.approver", result.DecidedBy);
     }
+
+    [Fact]
+    public void Approve_DirectorWithinLimit_ApprovesSuccessfully()
+    {
+        var service = ServiceFor(InvoiceWith("INV-D1", InvoiceStatus.PendingApproval, 250000m));
+        var result = service.Approve("INV-D1", "demo.director", "Director");
+
+        Assert.Equal(InvoiceStatus.Approved, result.Status);
+        Assert.Equal("demo.director", result.DecidedBy);
+    }
+
+    [Fact]
+    public void Approve_DirectorAtExactBoundary_ApprovesSuccessfully()
+    {
+        var service = ServiceFor(InvoiceWith("INV-D2", InvoiceStatus.PendingApproval, 500000m));
+        var result = service.Approve("INV-D2", "demo.director", "Director");
+
+        Assert.Equal(InvoiceStatus.Approved, result.Status);
+        Assert.Equal("demo.director", result.DecidedBy);
+    }
+
+    [Fact]
+    public void Approve_DirectorExceedingBoundary_ThrowsApprovalLimitExceededException()
+    {
+        var service = ServiceFor(InvoiceWith("INV-D3", InvoiceStatus.PendingApproval, 500000.01m));
+
+        var ex = Assert.Throws<ApprovalLimitExceededException>(() =>
+            service.Approve("INV-D3", "demo.director", "Director"));
+
+        Assert.Contains("Director approval limit exceeded", ex.Message);
+        Assert.Contains("500000.00", ex.Message);
+    }
+
+    [Fact]
+    public void Reject_DirectorWithinLimit_RejectsSuccessfully()
+    {
+        var service = ServiceFor(InvoiceWith("INV-DR1", InvoiceStatus.PendingApproval, 500000m));
+        var result = service.Reject("INV-DR1", "demo.director", "Over budget for project", "Director");
+
+        Assert.Equal(InvoiceStatus.Rejected, result.Status);
+        Assert.Equal("demo.director", result.DecidedBy);
+        Assert.Equal("Over budget for project", result.DecisionNote);
+    }
+
+    [Fact]
+    public void Reject_DirectorOverLimit_ThrowsApprovalLimitExceededException()
+    {
+        var service = ServiceFor(InvoiceWith("INV-DR2", InvoiceStatus.PendingApproval, 500000.01m));
+
+        var ex = Assert.Throws<ApprovalLimitExceededException>(() =>
+            service.Reject("INV-DR2", "demo.director", "Too expensive", "Director"));
+
+        Assert.Contains("Director rejection limit exceeded", ex.Message);
+        Assert.Contains("500000.00", ex.Message);
+    }
 }

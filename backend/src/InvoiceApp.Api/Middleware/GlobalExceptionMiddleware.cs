@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using InvoiceApp.Api.Models;
+using InvoiceApp.Domain;
 
 namespace InvoiceApp.Api.Middleware;
 
@@ -36,6 +37,7 @@ public class GlobalExceptionMiddleware
         var (statusCode, code, message) = exception switch
         {
             KeyNotFoundException knf => (HttpStatusCode.NotFound, "NOT_FOUND", knf.Message),
+            ApprovalLimitExceededException ale => (HttpStatusCode.BadRequest, "LIMIT_EXCEEDED", ale.Message),
             ArgumentException ae => (HttpStatusCode.BadRequest, "BAD_REQUEST", ae.Message),
             InvalidOperationException ioe => (HttpStatusCode.Conflict, "CONFLICT", ioe.Message),
             UnauthorizedAccessException uae => (HttpStatusCode.Unauthorized, "UNAUTHORIZED", uae.Message),

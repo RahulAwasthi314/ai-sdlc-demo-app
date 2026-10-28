@@ -137,4 +137,43 @@ describe('PendingApprovalsComponent', () => {
 
     expect(component.decisionError()).toContain('reason is required');
   });
+
+  it('should identify over-limit for Director when amount > 500,000', () => {
+    const authService = TestBed.inject(AuthService);
+    (authService as any).sessionState.set({
+      token: 'test-token',
+      username: 'demo.director',
+      role: 'Director',
+    });
+
+    expect(component.isOverLimit(250000)).toBe(false);
+    expect(component.isOverLimit(500000)).toBe(false);
+    expect(component.isOverLimit(500000.01)).toBe(true);
+    expect(component.getLimitWarning(500000.01)).toBe('Exceeds $500k Limit');
+  });
+
+  it('should display error alert when Director approval exceeds 500,000', () => {
+    const authService = TestBed.inject(AuthService);
+    (authService as any).sessionState.set({
+      token: 'test-token',
+      username: 'demo.director',
+      role: 'Director',
+    });
+
+    fixture.detectChanges();
+    httpMock.expectOne('/api/invoices').flush(mockInvoices);
+
+    component.onApprove('INV-202');
+
+    const approveReq = httpMock.expectOne('/api/approvals/INV-202/approve');
+    const limitError: ApiErrorDto = {
+      error: 'Director approval limit exceeded: invoice amount 550000.00 exceeds authorized threshold of 500000.00.',
+      code: 'LIMIT_EXCEEDED',
+      status: 400,
+    };
+    approveReq.flush(limitError, { status: 400, statusText: 'Bad Request' });
+
+    expect(component.decisionError()).toContain('Director approval limit exceeded');
+    expect(component.decisionError()).toContain('500000.00');
+  });
 });

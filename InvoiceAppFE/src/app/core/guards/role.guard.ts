@@ -35,7 +35,7 @@ export const roleGuard = (allowedRoles: UserRole[]): CanActivateFn => {
     }
 
     // Redirect to the appropriate home for their role
-    if (currentRole === 'Manager' || currentRole === 'Approver') {
+    if (currentRole === 'Manager' || currentRole === 'Approver' || currentRole === 'Director') {
       return router.parseUrl('/approvals');
     }
 
