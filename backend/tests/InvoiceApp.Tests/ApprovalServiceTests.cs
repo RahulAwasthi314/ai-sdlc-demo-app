@@ -13,6 +13,16 @@ public class ApprovalServiceTests
         new(new FakeInvoiceRepository(invoices));
 
     [Fact]
+    public void Invoice_DefaultValues_AreInitializedCorrectly()
+    {
+        var invoice = new Invoice();
+        Assert.Equal(string.Empty, invoice.Id);
+        Assert.Equal(string.Empty, invoice.CustomerName);
+        Assert.NotNull(invoice.Approvers);
+        Assert.Empty(invoice.Approvers);
+    }
+
+    [Fact]
     public void Submit_MovesDraftToPendingApproval()
     {
         var repository = new FakeInvoiceRepository(InvoiceWith("INV-1", InvoiceStatus.Draft));
@@ -21,6 +31,7 @@ public class ApprovalServiceTests
 
         Assert.Equal(InvoiceStatus.PendingApproval, result.Status);
         Assert.Equal(InvoiceStatus.PendingApproval, repository.GetById("INV-1")!.Status);
+        Assert.Contains(result, repository.UpdatedInvoices);
     }
 
     [Fact]
@@ -44,6 +55,7 @@ public class ApprovalServiceTests
         Assert.NotNull(result.DecidedAt);
         Assert.Equal(InvoiceStatus.Approved, repository.GetById("INV-1")!.Status);
         Assert.Equal("demo.approver", repository.GetById("INV-1")!.DecidedBy);
+        Assert.Contains(result, repository.UpdatedInvoices);
     }
 
     [Fact]
@@ -75,6 +87,7 @@ public class ApprovalServiceTests
         Assert.Equal("Duplicate invoice", result.DecisionNote);
         Assert.Equal(InvoiceStatus.Rejected, repository.GetById("INV-1")!.Status);
         Assert.Equal("Duplicate invoice", repository.GetById("INV-1")!.DecisionNote);
+        Assert.Contains(result, repository.UpdatedInvoices);
     }
 
     [Fact]
