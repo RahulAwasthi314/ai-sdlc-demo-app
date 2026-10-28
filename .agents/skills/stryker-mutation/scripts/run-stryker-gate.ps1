@@ -85,7 +85,10 @@ Write-Host "`n[3/4] Running dotnet Stryker mutation analysis..." -ForegroundColo
 $strykerArgs = @("stryker", "--project", "InvoiceApp.Domain.csproj", "-r", "ClearText", "-r", "Json", "-r", "Html", "-b", "$Threshold")
 
 if (-not $Full) {
-    $sinceRef = if ($Since) { $Since } else { $TargetBranch }
+    $sinceRef = if ($Since) {
+        $resolved = & git rev-parse $Since 2>$null
+        if ($resolved) { $resolved.Trim() } else { $Since }
+    } else { $TargetBranch }
     Write-Host "Mode: Differential mutation testing (target: $sinceRef)" -ForegroundColor Cyan
     $strykerArgs += "--since:$sinceRef"
 } else {
